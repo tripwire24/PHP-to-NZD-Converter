@@ -150,9 +150,13 @@ function CurrencyConverter() {
                                 />
                                 <button
                                     onClick={startCamera}
-                                    className="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition"
+                                    className="text-indigo-600 hover:text-indigo-800 focus:outline-none transition"
+                                    aria-label="Open camera"
                                 >
-                                    📷
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                                        <circle cx="12" cy="13" r="3" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
