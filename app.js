@@ -20,6 +20,14 @@ function CurrencyConverter() {
         return () => clearInterval(interval);
     }, []);
 
+    useEffect(() => {
+    // Load saved history when component mounts
+    const savedHistory = localStorage.getItem('conversionHistory');
+    if (savedHistory) {
+        setHistory(JSON.parse(savedHistory));
+    }
+}, []);
+
     const fetchExchangeRate = async () => {
         try {
             const response = await fetch('https://api.exchangerate-api.com/v4/latest/PHP');
@@ -49,20 +57,23 @@ function CurrencyConverter() {
         convertCurrency(value);
     };
 
-    const saveAndReset = () => {
-        if (phpAmount && nzdAmount) {
-            const newEntry = {
-                id: Date.now(),
-                php: phpAmount,
-                nzd: nzdAmount,
-                rate: rate,
-                timestamp: new Date().toLocaleString()
-            };
-            setHistory([newEntry, ...history.slice(0, 9)]);
-            setPhpAmount('');
-            setNzdAmount('');
-        }
-    };
+const saveAndReset = () => {
+    if (phpAmount && nzdAmount) {
+        const newEntry = {
+            id: Date.now(),
+            php: phpAmount,
+            nzd: nzdAmount,
+            rate: rate,
+            timestamp: new Date().toLocaleString()
+        };
+        const newHistory = [newEntry, ...history.slice(0, 9)];
+        setHistory(newHistory);
+        // Save to localStorage
+        localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
+        setPhpAmount('');
+        setNzdAmount('');
+    }
+};
 
     // Camera functions...
     const startCamera = async () => {
