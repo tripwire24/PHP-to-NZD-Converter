@@ -15,3 +15,20 @@
 <body class="min-h-screen bg-gradient-to-br from-red-100 via-white to-blue-100">
     <div id="root"></div>
     
+<script type="text/babel" src="app.js"></script>
+    <script type="text/babel">
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => {
+                    console.error('ServiceWorker registration failed:', err);
+                });
+            });
+        }
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CurrencyConverter />);
+    </script>
+</body>
+</html>
