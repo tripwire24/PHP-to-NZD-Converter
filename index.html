@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4f46e5">
+    <title>PHP to NZD Converter</title>
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlBIUCB0byBOWkQgQ29udmVydGVyIiwKICAic2hvcnRfbmFtZSI6ICJQSFAtTlpEIiwKICAic3RhcnRfdXJsIjogIi4vIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZmZmZmZmIiwKICAidGhlbWVfY29sb3IiOiAiIzRmNDZlNSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBQkFBQUFBUUNBWUFBQUFmOC85aEFBQUFDWEJJV1hNQUFBc1RBQUFMRXdFQW1wd1lBQUFCcVVsRVFWUTRqYldTTVc3Q1FCQkY5eS9aaUNLaWNBRktTa3BLU2k3QUJYd0VTbzVBU1VsSlNZbm9LQ2twS1NrcEtlRUNGSlNVbE1ZeE1sZ1ljUDVHSTQwME8yOW45cThzNm5xZmk4WGlGY0FZNDNKakxNa1pLdmwrWDVEa25YVDY5TGpkYnI4QWZJYVFiZzNEOE9HYytpUW5BRjVDcnlUSEFENENnQ1JuQUQ1RFNMSjgzTzl4djkvUDI3YTlPT2RlU0U2Y2MzTm1aaWE1Y2M2OWtaeVpXZE8yN2JWdDI2dWU1L2NrSnlRWGt2emJrWnlRWEpCY0FtaUtvcmdsT2UyNnJtcWE1Z3pnR3NCbkNFa3l5L084YXB2bVFuSks4Z1pBbG1YWkQ0QnZTWTVwbWpZazF3QithWjRCL0VUNW9zOEEvZ0JVQUw2U0pQbU9JY2tBQUFBQVNVVk9SSzVDWUlJPSIsCiAgICAgICJzaXplcyI6ICI0OHg0OCIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIKICAgIH0KICBdCn0=">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-indigo-100 to-purple-100 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function CurrencyConverter() {
+            const [phpAmount, setPhpAmount] = useState('');
+            const [nzdAmount, setNzdAmount] = useState('');
+            const [rate, setRate] = useState(0.027);
+            const [isLoading, setIsLoading] = useState(false);
+            const [showCamera, setShowCamera] = useState(false);
+            const [history, setHistory] = useState([]);
+            const videoRef = useRef(null);
+            const canvasRef = useRef(null);
+
+            const convertCurrency = (value) => {
+                const amount = parseFloat(value);
+                if (!isNaN(amount)) {
+                    setNzdAmount((amount * rate).toFixed(2));
+                } else {
+                    setNzdAmount('');
+                }
+            };
+
+            const handlePhpChange = (e) => {
+                const value = e.target.value;
+                setPhpAmount(value);
+                convertCurrency(value);
+            };
+
+            const saveAndReset = () => {
+                if (phpAmount && nzdAmount) {
+                    const newEntry = {
+                        id: Date.now(),
+                        php: phpAmount,
+                        nzd: nzdAmount,
+                        timestamp: new Date().toLocaleString()
+                    };
+                    setHistory([newEntry, ...history.slice(0, 9)]); // Keep last 10 entries
+                    setPhpAmount('');
+                    setNzdAmount('');
+                }
+            };
+
+            const startCamera = async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = stream;
+                        setShowCamera(true);
+                    }
+                } catch (err) {
+                    console.error('Error accessing camera:', err);
+                    alert('Unable to access camera. Please make sure you have granted camera permissions.');
+                }
+            };
+
+            const captureImage = async () => {
+                if (!videoRef.current || !canvasRef.current) return;
+
+                const video = videoRef.current;
+                const canvas = canvasRef.current;
+                const context = canvas.getContext('2d');
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                const stream = video.srcObject;
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                setShowCamera(false);
+
+                setIsLoading(true);
+                try {
+                    const result = await Tesseract.recognize(
+                        canvas.toDataURL('image/png'),
+                        'eng',
+                        { logger: m => console.log(m) }
+                    );
+
+                    const numbers = result.data.text.match(/\d+(\.\d+)?/);
+                    if (numbers) {
+                        setPhpAmount(numbers[0]);
+                        convertCurrency(numbers[0]);
+                    }
+                } catch (err) {
+                    console.error('Error processing image:', err);
+                    alert('Error processing image. Please try again or enter the amount manually.');
+                }
+                setIsLoading(false);
+            };
+
+            return (
+                <div className="min-h-screen p-4 space-y-6">
+                    <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+                        <div className="bg-indigo-600 px-6 py-4">
+                            <h1 className="text-2xl font-bold text-white text-center">PHP to NZD Converter</h1>
+                        </div>
+                        
+                        <div className="p-6 space-y-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Amount (PHP)
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="number"
+                                            value={phpAmount}
+                                            onChange={handlePhpChange}
+                                            className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                            placeholder="Enter amount in PHP"
+                                        />
+                                        <button
+                                            onClick={startCamera}
+                                            className="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition"
+                                        >
+                                            📷
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Amount (NZD)
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={nzdAmount}
+                                            readOnly
+                                            className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-gray-50"
+                                        />
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                                            <span className="text-gray-500">NZD</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={saveAndReset}
+                                    disabled={!phpAmount || !nzdAmount}
+                                    className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Save & Reset
+                                </button>
+
+                                {isLoading && (
+                                    <div className="text-center text-gray-600 animate-pulse">
+                                        Processing image...
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {history.length > 0 && (
+                        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+                            <div className="bg-indigo-600 px-6 py-4">
+                                <h2 className="text-xl font-bold text-white text-center">Conversion History</h2>
+                            </div>
+                            <div className="divide-y divide-gray-200 max-h-96 overflow-auto">
+                                {history.map(entry => (
+                                    <div key={entry.id} className="p-4 hover:bg-gray-50 transition">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <span className="text-lg font-medium text-gray-900">₱{entry.php}</span>
+                                                <span className="mx-2 text-gray-500">→</span>
+                                                <span className="text-lg font-medium text-indigo-600">NZ${entry.nzd}</span>
+                                            </div>
+                                            <span className="text-sm text-gray-500">{entry.timestamp}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {showCamera && (
+                        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white p-4 rounded-2xl w-full max-w-md">
+                                <video
+                                    ref={videoRef}
+                                    autoPlay
+                                    playsInline
+                                    className="w-full rounded-lg"
+                                />
+                                <div className="mt-4 flex justify-between gap-4">
+                                    <button
+                                        onClick={() => {
+                                            const stream = videoRef.current.srcObject;
+                                            if (stream) {
+                                                stream.getTracks().forEach(track => track.stop());
+                                            }
+                                            setShowCamera(false);
+                                        }}
+                                        className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={captureImage}
+                                        className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                                    >
+                                        Capture
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <canvas ref={canvasRef} style={{ display: 'none' }} />
+                </div>
+            );
+        }
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => {
+                    console.error('ServiceWorker registration failed:', err);
+                });
+            });
+        }
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CurrencyConverter />);
+    </script>
+
+    <script>
+        // Service Worker
+        const CACHE_NAME = 'php-nzd-converter-v1';
+        const urlsToCache = [
+            './',
+            './index.html',
+        ];
+
+        self.addEventListener('install', event => {
+            event.waitUntil(
+                caches.open(CACHE_NAME)
+                    .then(cache => cache.addAll(urlsToCache))
+            );
+        });
+
+        self.addEventListener('fetch', event => {
+            event.respondWith(
+                caches.match(event.request)
+                    .then(response => response || fetch(event.request))
+            );
+        });
+    </script>
+</body>
+</html>
