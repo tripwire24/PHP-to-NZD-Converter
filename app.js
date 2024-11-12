@@ -5,14 +5,14 @@ function CurrencyConverter() {
     const [nzdAmount, setNzdAmount] = useState('');
     const [rate, setRate] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [showCamera, setShowCamera] = useState(false);
     const [history, setHistory] = useState([]);
     const [error, setError] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [expandedItem, setExpandedItem] = useState(null);
+    const [expandedImage, setExpandedImage] = useState(null);
     const videoRef = useRef(null);
-    const canvasRef = useRef(null);
+    const photoRef = useRef(null);
     // Load saved history when component mounts
     useEffect(() => {
         const savedHistory = localStorage.getItem('conversionHistory');
@@ -41,14 +41,14 @@ function CurrencyConverter() {
         const interval = setInterval(fetchExchangeRate, 3600000);
         return () => clearInterval(interval);
     }, []);
-    const StarRating = ({ rating, onRatingChange, readonly = false }) => {
+    const StarRating = ({ rating, onRatingChange }) => {
         return (
             <div className="flex items-center space-x-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                     <button
                         key={star}
-                        onClick={() => !readonly && onRatingChange(star)}
-                        className={`focus:outline-none ${readonly ? 'cursor-default' : 'cursor-pointer'}`}
+                        onClick={() => onRatingChange(star)}
+                        className="focus:outline-none"
                     >
                         <svg
                             className={`w-6 h-6 ${
@@ -79,8 +79,6 @@ const convertCurrency = (value) => {
         convertCurrency(value);
     };
 
-    const [expandedItem, setExpandedItem] = useState(null);
-    
     const handleHistoryItemExpand = (id) => {
         setExpandedItem(expandedItem === id ? null : id);
     };
@@ -106,7 +104,46 @@ const convertCurrency = (value) => {
         setHistory(newHistory);
         localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
     };
-const saveAndReset = () => {
+
+    const handlePhotoCapture = async (id, photoNumber) => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' } 
+            });
+            videoRef.current.srcObject = stream;
+            videoRef.current.play();
+
+            // Take the photo when the video is playing
+            videoRef.current.addEventListener('canplay', () => {
+                if (photoRef.current && videoRef.current) {
+                    const context = photoRef.current.getContext('2d');
+                    photoRef.current.width = videoRef.current.videoWidth;
+                    photoRef.current.height = videoRef.current.videoHeight;
+                    context.drawImage(videoRef.current, 0, 0);
+                    
+                    const photoData = photoRef.current.toDataURL('image/jpeg');
+                    
+                    // Stop the camera
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    // Update history with the new photo
+                    const newHistory = history.map(item => {
+                        if (item.id === id) {
+                            return {
+                                ...item,
+                                [`photo${photoNumber}`]: photoData
+                            };
+                        }
+                        return item;
+                    });
+                    setHistory(newHistory);
+                    localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
+                }
+            }, { once: true });
+
+        } catch (err) {
+            setError('Camera access denied. Please check your permissions.');
+            const saveAndReset = () => {
         if (phpAmount && nzdAmount) {
             const newEntry = {
                 id: Date.now(),
@@ -115,7 +152,9 @@ const saveAndReset = () => {
                 rate: rate,
                 timestamp: new Date().toLocaleString(),
                 storeName: '',
-                rating: 0
+                rating: 0,
+                photo1: null,
+                photo2: null
             };
             const newHistory = [newEntry, ...history.slice(0, 9)];
             setHistory(newHistory);
@@ -136,56 +175,7 @@ const saveAndReset = () => {
         localStorage.removeItem('conversionHistory');
         setShowDeleteConfirm(false);
     };
-const startCamera = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' } 
-            });
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                setShowCamera(true);
-            }
-        } catch (err) {
-            setError('Camera access denied. Please check your permissions.');
-        }
-    };
-
-    const captureImage = async () => {
-        if (!videoRef.current || !canvasRef.current) return;
-
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const stream = video.srcObject;
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
-        setShowCamera(false);
-
-        setIsLoading(true);
-        try {
-            const result = await Tesseract.recognize(
-                canvas.toDataURL('image/png'),
-                'eng',
-                { logger: m => console.log(m) }
-            );
-
-            const numbers = result.data.text.match(/\d+(\.\d+)?/);
-            if (numbers) {
-                setPhpAmount(numbers[0]);
-                convertCurrency(numbers[0]);
-            }
-        } catch (err) {
-            setError('Failed to process image. Please enter amount manually.');
-        }
-        setIsLoading(false);
-    };
-return (
+            return (
         <div className="min-h-screen p-4 space-y-6">
             {/* Main converter card */}
             <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -211,25 +201,13 @@ return (
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Amount (PHP)
                             </label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="number"
-                                    value={phpAmount}
-                                    onChange={handlePhpChange}
-                                    className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                                    placeholder="Enter amount in PHP"
-                                />
-                                <button
-                                    onClick={startCamera}
-                                    className="text-indigo-600 hover:text-indigo-800 focus:outline-none transition"
-                                    aria-label="Open camera"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                                        <circle cx="12" cy="13" r="3" />
-                                    </svg>
-                                </button>
-                            </div>
+                            <input
+                                type="number"
+                                value={phpAmount}
+                                onChange={handlePhpChange}
+                                className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                placeholder="Enter amount in PHP"
+                            />
                         </div>
 
                         {/* NZD Amount Display */}
@@ -260,13 +238,13 @@ return (
 
                         {isLoading && (
                             <div className="text-center text-gray-600 animate-pulse">
-                                Processing image...
+                                Processing...
                             </div>
                         )}
                     </div>
                 </div>
             </div>
-            {/* History section */}
+{/* History section */}
             {history.length > 0 && (
                 <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
                     <div className="bg-indigo-600 px-6 py-4 flex justify-between items-center">
@@ -327,15 +305,57 @@ return (
                                                 onRatingChange={(rating) => handleRatingUpdate(entry.id, rating)}
                                             />
                                         </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Photos
+                                            </label>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {/* Photo 1 */}
+                                                <div className="relative">
+                                                    {entry.photo1 ? (
+                                                        <img
+                                                            src={entry.photo1}
+                                                            alt="Photo 1"
+                                                            className="w-full h-32 object-cover rounded-lg cursor-pointer"
+                                                            onClick={() => setExpandedImage(entry.photo1)}
+                                                        />
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handlePhotoCapture(entry.id, 1)}
+                                                            className="w-full h-32 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 transition"
+                                                        >
+                                                            <span className="text-4xl text-gray-400">📷</span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {/* Photo 2 */}
+                                                <div className="relative">
+                                                    {entry.photo2 ? (
+                                                        <img
+                                                            src={entry.photo2}
+                                                            alt="Photo 2"
+                                                            className="w-full h-32 object-cover rounded-lg cursor-pointer"
+                                                            onClick={() => setExpandedImage(entry.photo2)}
+                                                        />
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handlePhotoCapture(entry.id, 2)}
+                                                            className="w-full h-32 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 transition"
+                                                        >
+                                                            <span className="text-4xl text-gray-400">📷</span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-sm text-gray-500">
+                                            Rate: 1 PHP = {entry.rate?.toFixed(4)} NZD
+                                        </div>
+                                        <div className="text-xs text-gray-400">
+                                            {entry.timestamp}
+                                        </div>
                                     </div>
                                 )}
-
-                                <div className="text-sm text-gray-500 mt-1">
-                                    Rate: 1 PHP = {entry.rate?.toFixed(4)} NZD
-                                </div>
-                                <div className="text-xs text-gray-400 mt-1">
-                                    {entry.timestamp}
-                                </div>
                             </div>
                         ))}
                     </div>
@@ -367,43 +387,42 @@ return (
                 </div>
             )}
 
-            {/* Camera modal */}
-            {showCamera && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white p-4 rounded-2xl w-full max-w-md">
-                        <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            className="w-full rounded-lg"
-                        />
-                        <div className="mt-4 flex justify-between gap-4">
-                            <button
-                                onClick={() => {
-                                    const stream = videoRef.current.srcObject;
-                                    if (stream) {
-                                        stream.getTracks().forEach(track => track.stop());
-                                    }
-                                    setShowCamera(false);
-                                }}
-                                className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={captureImage}
-                                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                            >
-                                Capture
-                            </button>
-                        </div>
-                    </div>
+            {/* Expanded Image Modal */}
+            {expandedImage && (
+                <div 
+                    className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50"
+                    onClick={() => setExpandedImage(null)}
+                >
+                    <img 
+                        src={expandedImage} 
+                        alt="Expanded view" 
+                        className="max-w-full max-h-full object-contain"
+                    />
+                    <button 
+                        className="absolute top-4 right-4 text-white text-xl p-2"
+                        onClick={() => setExpandedImage(null)}
+                    >
+                        ✕
+                    </button>
                 </div>
             )}
-            <canvas ref={canvasRef} style={{ display: 'none' }} />
-        </div>
+
+            {/* Hidden video and canvas elements for photo capture */}
+            <video
+                ref={videoRef}
+                style={{ display: 'none' }}
+                playsInline
+            />
+            <canvas
+                ref={photoRef}
+                style={{ display: 'none' }}
+            />
+        }
+    };
+</div>
     );
 }
+
 // Render the app
 ReactDOM.render(
     <CurrencyConverter />,
