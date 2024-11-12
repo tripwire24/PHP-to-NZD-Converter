@@ -1,7 +1,7 @@
 const CACHE_NAME = 'php-nzd-converter-v1';
-const DYNAMIC_CACHE = 'php-nzd-dynamic-v1';
+const STATIC_CACHE = 'static-cache-v1';
+const DYNAMIC_CACHE = 'dynamic-cache-v1';
 
-// Assets to cache on install
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -9,75 +9,71 @@ const STATIC_ASSETS = [
     './manifest.json',
     './icons/icon-192x192.png',
     './icons/icon-512x512.png',
-    'https://unpkg.com/react@17/umd/react.production.min.js',
-    'https://unpkg.com/react-dom@17/umd/react-dom.production.min.js',
+    'https://unpkg.com/react@17/umd/react.development.js',
+    'https://unpkg.com/react-dom@17/umd/react-dom.development.js',
+    'https://unpkg.com/@babel/standalone/babel.min.js',
     'https://cdn.tailwindcss.com',
     'https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'
 ];
 
-// Install event - cache static assets
-self.addEventListener('install', event => {
+// Install Event
+self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('Caching static assets');
-                return cache.addAll(STATIC_ASSETS);
-            })
+        caches.open(STATIC_CACHE)
+            .then(cache => cache.addAll(STATIC_ASSETS))
             .then(() => self.skipWaiting())
     );
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', event => {
+// Activate Event
+self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys()
-            .then(cacheNames => {
-                return Promise.all(
-                    cacheNames
-                        .filter(name => name !== CACHE_NAME && name !== DYNAMIC_CACHE)
-                        .map(name => caches.delete(name))
-                );
-            })
-            .then(() => {
-                console.log('Service Worker activated');
-                return self.clients.claim();
-            })
+        Promise.all([
+            caches.keys().then(keys => Promise.all(
+                keys.filter(key => key !== STATIC_CACHE && key !== DYNAMIC_CACHE)
+                    .map(key => caches.delete(key))
+            )),
+            self.clients.claim()
+        ])
     );
 });
 
-// Fetch event - handle requests
-self.addEventListener('fetch', event => {
+// Fetch Event
+self.addEventListener('fetch', (event) => {
+    // Handle API requests
+    if (event.request.url.includes('api.exchangerate-api.com')) {
+        event.respondWith(
+            fetch(event.request)
+                .then(response => {
+                    const clonedResponse = response.clone();
+                    caches.open(DYNAMIC_CACHE)
+                        .then(cache => cache.put(event.request, clonedResponse));
+                    return response;
+                })
+                .catch(() => caches.match(event.request))
+        );
+        return;
+    }
+
+    // Handle static assets
     event.respondWith(
         caches.match(event.request)
-            .then(response => {
-                return response || fetch(event.request)
-                    .then(fetchResponse => {
-                        // Don't cache API responses
-                        if (event.request.url.includes('exchangerate-api.com')) {
-                            return fetchResponse;
+            .then(cachedResponse => {
+                if (cachedResponse) {
+                    return cachedResponse;
+                }
+                return fetch(event.request)
+                    .then(response => {
+                        if (!response || response.status !== 200 || response.type !== 'basic') {
+                            return response;
                         }
-
-                        // Clone the response before using it
-                        const responseToCache = fetchResponse.clone();
-
-                        // Add to cache
+                        const responseToCache = response.clone();
                         caches.open(DYNAMIC_CACHE)
                             .then(cache => {
                                 cache.put(event.request, responseToCache);
                             });
-
-                        return fetchResponse;
+                        return response;
                     });
-            })
-            .catch(() => {
-                // If it's an API request, return a default response
-                if (event.request.url.includes('exchangerate-api.com')) {
-                    return new Response(JSON.stringify({
-                        rates: { NZD: 0.027 } // Fallback exchange rate
-                    }), {
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                }
             })
     );
 });
