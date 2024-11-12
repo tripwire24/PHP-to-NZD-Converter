@@ -2,102 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PHP to NZD Converter</title>
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="PHP-NZD">
-    <meta name="description" content="Convert Philippine Peso to New Zealand Dollar with ease">
-    
-    <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180x180.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167x167.png">
-
-    <!-- Splash Screen Images for iOS -->
-    <link rel="apple-touch-startup-image" href="splash/apple-splash-2048-2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)">
-    <link rel="apple-touch-startup-image" href="splash/apple-splash-1668-2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)">
-    <link rel="apple-touch-startup-image" href="splash/apple-splash-1536-2048.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)">
-    <link rel="apple-touch-startup-image" href="splash/apple-splash-1125-2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)">
-    <link rel="apple-touch-startup-image" href="splash/apple-splash-828-1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)">
-    
-    <!-- Favicon -->
-    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-    
+    <meta name="description" content="Convert Philippine Peso to New Zealand Dollar">
     <!-- Required Scripts -->
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js"></script>
-
-    <!-- Custom Styles -->
-    <style>
-        /* Prevent text size adjustment on iOS */
-        html {
-            -webkit-text-size-adjust: 100%;
-        }
-        
-        /* Hide scrollbar for Chrome, Safari and Opera */
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        
-        /* Hide scrollbar for IE, Edge and Firefox */
-        .hide-scrollbar {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-
-        /* Add to Home Screen button style */
-        .install-button {
-            display: none;
-        }
-
-        /* Custom tap highlight color for mobile */
-        * {
-            -webkit-tap-highlight-color: rgba(0,0,0,0);
-        }
-
-        /* Smooth scrolling */
-        html {
-            scroll-behavior: smooth;
-        }
-
-        /* Prevent pull to refresh on mobile */
-        body {
-            overscroll-behavior-y: contain;
-        }
-    </style>
 </head>
 <body class="bg-gray-100">
     <div id="root"></div>
-
-    <!-- Install prompt for PWA -->
-    <div id="install-prompt" class="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-lg transform translate-y-full transition-transform duration-300 ease-in-out">
-        <div class="max-w-md mx-auto flex items-center justify-between">
-            <div>
-                <h3 class="text-lg font-semibold">Install App</h3>
-                <p class="text-sm text-gray-600">Add to your home screen for quick access</p>
-            </div>
-            <div class="flex space-x-2">
-                <button id="install-dismiss" class="px-4 py-2 text-gray-600">Not now</button>
-                <button id="install-accept" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Install</button>
-            </div>
-        </div>
-    </div>
-
+    
     <!-- Main App Script -->
-    <script src="app.js"></script>
-
+    <script type="text/babel" src="app.js"></script>
     <!-- Service Worker Registration -->
     <script>
-        // Register Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
@@ -105,51 +30,9 @@
                         console.log('ServiceWorker registration successful');
                     })
                     .catch(err => {
-                        console.error('ServiceWorker registration failed: ', err);
+                        console.log('ServiceWorker registration failed: ', err);
                     });
             });
-        }
-
-        // Handle PWA Install Prompt
-        let deferredPrompt;
-        const installPrompt = document.getElementById('install-prompt');
-        const installAccept = document.getElementById('install-accept');
-        const installDismiss = document.getElementById('install-dismiss');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installPrompt.classList.remove('translate-y-full');
-        });
-
-        installAccept.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                deferredPrompt = null;
-                installPrompt.classList.add('translate-y-full');
-            }
-        });
-
-        installDismiss.addEventListener('click', () => {
-            installPrompt.classList.add('translate-y-full');
-        });
-
-        // Handle iOS PWA Install Prompt
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
-
-        if (isIOS && !isInStandaloneMode) {
-            const iosPrompt = document.createElement('div');
-            iosPrompt.innerHTML = `
-                <div class="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-lg">
-                    <div class="max-w-md mx-auto">
-                        <h3 class="text-lg font-semibold">Install this app</h3>
-                        <p class="text-sm text-gray-600">Tap <svg class="inline-block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg> then "Add to Home Screen"</p>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(iosPrompt);
         }
     </script>
 </body>
