@@ -105,6 +105,7 @@ const convertCurrency = (value) => {
         localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
     };
 
+    // Handle photo capture function
     const handlePhotoCapture = async (id, photoNumber) => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -143,7 +144,11 @@ const convertCurrency = (value) => {
 
         } catch (err) {
             setError('Camera access denied. Please check your permissions.');
-            const saveAndReset = () => {
+        }
+    };
+
+    // Separate saveAndReset function
+    const saveAndReset = () => {
         if (phpAmount && nzdAmount) {
             const newEntry = {
                 id: Date.now(),
@@ -417,9 +422,7 @@ const convertCurrency = (value) => {
                 ref={photoRef}
                 style={{ display: 'none' }}
             />
-        }
-    };
-</div>
+        </div>
     );
 }
 
