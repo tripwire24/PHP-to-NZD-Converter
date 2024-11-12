@@ -287,7 +287,7 @@ const handlePhotoCapture = async (id, photoNumber) => {
                 </div>
             </div>
 {/* History section */}
-            {history.length > 0 && (
+{history.length > 0 && (
                 <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
                     <div className="bg-indigo-600 px-6 py-4 flex justify-between items-center">
                         <h2 className="text-xl font-bold text-white">Conversion History</h2>
@@ -374,8 +374,7 @@ const handlePhotoCapture = async (id, photoNumber) => {
                                                                     setHistory(newHistory);
                                                                     localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
                                                                 }}
-                                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 
-                                                                         opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                                             >
                                                                 ❌
                                                             </button>
@@ -383,9 +382,7 @@ const handlePhotoCapture = async (id, photoNumber) => {
                                                     ) : (
                                                         <button
                                                             onClick={() => handlePhotoCapture(entry.id, 1)}
-                                                            className="w-full h-32 flex flex-col items-center justify-center border-2 
-                                                                     border-dashed border-gray-300 rounded-lg hover:border-indigo-500 
-                                                                     hover:bg-indigo-50 transition"
+                                                            className="w-full h-32 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition"
                                                         >
                                                             <span className="text-4xl text-gray-400 mb-1">📷</span>
                                                             <span className="text-sm text-gray-500">Tap to capture</span>
@@ -414,8 +411,7 @@ const handlePhotoCapture = async (id, photoNumber) => {
                                                                     setHistory(newHistory);
                                                                     localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
                                                                 }}
-                                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 
-                                                                         opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                                             >
                                                                 ❌
                                                             </button>
@@ -423,15 +419,24 @@ const handlePhotoCapture = async (id, photoNumber) => {
                                                     ) : (
                                                         <button
                                                             onClick={() => handlePhotoCapture(entry.id, 2)}
-                                                            className="w-full h-32 flex flex-col items-center justify-center border-2 
-                                                                     border-dashed border-gray-300 rounded-lg hover:border-indigo-500 
-                                                                     hover:bg-indigo-50 transition"
+                                                            className="w-full h-32 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition"
                                                         >
                                                             <span className="text-4xl text-gray-400 mb-1">📷</span>
                                                             <span className="text-sm text-gray-500">Tap to capture</span>
                                                         </button>
                                                     )}
                                                 </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-sm text-gray-500">
+                                            Rate: 1 PHP = {entry.rate?.toFixed(4)} NZD
+                                        </div>
+                                        <div className="text-xs text-gray-400">
+                                            {entry.timestamp}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         ))}
                     </div>
                 </div>
