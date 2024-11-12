@@ -22,8 +22,8 @@
     }
   ],
   "categories": ["finance", "utilities"],
-  "lang": "en-US",
   "dir": "ltr",
-  "scope": "/",
-  "id": "php-nzd-converter"
+  "lang": "en",
+  "prefer_related_applications": false,
+  "display_override": ["standalone", "minimal-ui"]
 }
