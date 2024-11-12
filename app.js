@@ -14,11 +14,10 @@ function CurrencyConverter() {
     const videoRef = useRef(null);
     const photoRef = useRef(null);
 
-        useEffect(() => {
-        // Check if app is installed
+    // Data persistence useEffect
+    useEffect(() => {
         const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
         
-        // Load data from localStorage
         const loadSavedData = () => {
             const savedHistory = localStorage.getItem('conversionHistory');
             if (savedHistory) {
@@ -40,25 +39,25 @@ function CurrencyConverter() {
             window.removeEventListener('historyUpdate', loadSavedData);
         };
     }, []);    
-    // Load saved history when component mounts
-/*useEffect(() => {
-    // Check storage usage
-    const checkStorage = async () => {
-        try {
-            const estimate = await navigator.storage.estimate();
-            const percentageUsed = (estimate.usage / estimate.quota) * 100;
-            if (percentageUsed > 80) {
-                setError('Storage space is running low. Consider deleting some photos.');
-            }
-        } catch (err) {
-            console.log('Storage estimation not available');
-        }
-    };
-    
-    checkStorage();
-}, [history]);
 
-    // Fetch exchange rate
+    // Storage check useEffect
+    useEffect(() => {
+        const checkStorage = async () => {
+            try {
+                const estimate = await navigator.storage.estimate();
+                const percentageUsed = (estimate.usage / estimate.quota) * 100;
+                if (percentageUsed > 80) {
+                    setError('Storage space is running low. Consider deleting some photos.');
+                }
+            } catch (err) {
+                console.log('Storage estimation not available');
+            }
+        };
+        
+        checkStorage();
+    }, [history]);
+
+    // Exchange rate fetch function
     const fetchExchangeRate = async () => {
         try {
             const response = await fetch('https://api.exchangerate-api.com/v4/latest/PHP');
@@ -72,9 +71,9 @@ function CurrencyConverter() {
         }
     };
 
+    // Exchange rate fetch useEffect
     useEffect(() => {
         fetchExchangeRate();
-        // Fetch rate every hour
         const interval = setInterval(fetchExchangeRate, 3600000);
         return () => clearInterval(interval);
     }, []);
