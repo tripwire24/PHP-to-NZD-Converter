@@ -14,12 +14,22 @@ function CurrencyConverter() {
     const videoRef = useRef(null);
     const photoRef = useRef(null);
     // Load saved history when component mounts
-    useEffect(() => {
-        const savedHistory = localStorage.getItem('conversionHistory');
-        if (savedHistory) {
-            setHistory(JSON.parse(savedHistory));
+useEffect(() => {
+    // Check storage usage
+    const checkStorage = async () => {
+        try {
+            const estimate = await navigator.storage.estimate();
+            const percentageUsed = (estimate.usage / estimate.quota) * 100;
+            if (percentageUsed > 80) {
+                setError('Storage space is running low. Consider deleting some photos.');
+            }
+        } catch (err) {
+            console.log('Storage estimation not available');
         }
-    }, []);
+    };
+    
+    checkStorage();
+}, [history]);
 
     // Fetch exchange rate
     const fetchExchangeRate = async () => {
