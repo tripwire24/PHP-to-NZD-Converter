@@ -14,6 +14,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
     <meta name="description" content="Convert Philippine Peso to New Zealand Dollar">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
     
     <!-- Required Scripts -->
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
@@ -75,16 +76,40 @@
                 min-width: 44px;
             }
         }
+
+        /* Install prompt styles */
+        .install-prompt {
+            transform: translateY(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        .install-prompt.show {
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="bg-gray-100 safe-area-padding">
     <div id="root"></div>
     
+    <!-- Install Prompt -->
+    <div id="installPrompt" class="install-prompt fixed bottom-0 left-0 right-0 bg-white p-4 shadow-lg hidden">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div>
+                <h3 class="font-semibold text-lg">Install App</h3>
+                <p class="text-sm text-gray-600">Add to your home screen for quick access</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="installDecline" class="px-4 py-2 text-gray-600">Not now</button>
+                <button id="installAccept" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Install</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Main App Script -->
     <script type="text/babel" src="app.js"></script>
 
-    <!-- Service Worker Registration -->
+    <!-- Service Worker and PWA Installation -->
     <script>
+        // Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
@@ -97,12 +122,69 @@
             });
         }
 
+        // Install Prompt Handler
+        let deferredPrompt;
+        const installPrompt = document.getElementById('installPrompt');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installPrompt.classList.remove('hidden');
+            installPrompt.classList.add('show');
+        });
+
+        document.getElementById('installAccept').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('App installed');
+                }
+                deferredPrompt = null;
+                installPrompt.classList.remove('show');
+                installPrompt.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('installDecline').addEventListener('click', () => {
+            installPrompt.classList.remove('show');
+            installPrompt.classList.add('hidden');
+        });
+
+        // iOS Install Prompt
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+        if (isIOS && !isInStandaloneMode) {
+            const iosPrompt = document.createElement('div');
+            iosPrompt.className = 'fixed bottom-0 left-0 right-0 bg-white p-4 shadow-lg';
+            iosPrompt.innerHTML = `
+                <div class="max-w-md mx-auto">
+                    <h3 class="font-semibold text-lg">Install this app</h3>
+                    <p class="text-sm text-gray-600">
+                        Tap <svg class="inline-block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+                        </svg> then "Add to Home Screen"
+                    </p>
+                </div>
+            `;
+            document.body.appendChild(iosPrompt);
+        }
+
         // Handle mobile keyboard
         window.visualViewport.addEventListener('resize', () => {
             if (document.activeElement.tagName === 'INPUT') {
                 document.body.classList.add('keyboard-open');
             } else {
                 document.body.classList.remove('keyboard-open');
+            }
+        });
+
+        // Handle storage changes
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'conversionHistory') {
+                // Trigger a reload of the data in the app
+                window.dispatchEvent(new CustomEvent('historyUpdate'));
             }
         });
     </script>
