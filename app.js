@@ -13,6 +13,23 @@ function CurrencyConverter() {
     const [expandedImage, setExpandedImage] = useState(null);
     const videoRef = useRef(null);
     const photoRef = useRef(null);
+
+        useEffect(() => {
+        // Check if app is installed
+        const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
+        
+        // Load data from localStorage
+        const loadSavedData = () => {
+            const savedHistory = localStorage.getItem('conversionHistory');
+            if (savedHistory) {
+                try {
+                    setHistory(JSON.parse(savedHistory));
+                } catch (e) {
+                    console.error('Error loading saved data:', e);
+                    localStorage.removeItem('conversionHistory');
+                }
+            }
+        };
     // Load saved history when component mounts
 useEffect(() => {
     // Check storage usage
