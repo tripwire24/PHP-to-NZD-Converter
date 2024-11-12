@@ -115,75 +115,69 @@ const handlePhotoCapture = async (id, photoNumber) => {
                 height: { ideal: 720 }
             } 
         });
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
 
-        // Add a camera UI
-        setIsLoading(true);
-        const cameraModal = document.createElement('div');
-        cameraModal.className = 'fixed inset-0 bg-black z-50 flex flex-col';
-        cameraModal.innerHTML = `
-            <video class="w-full h-full object-cover"></video>
-            <div class="absolute bottom-0 left-0 right-0 p-4 flex justify-center">
-                <button class="bg-white rounded-full p-4 shadow-lg">
-                    <span class="text-2xl">📸</span>
-                </button>
+        // Create and add camera UI
+        const cameraUI = document.createElement('div');
+        cameraUI.innerHTML = `
+            <div class="fixed inset-0 bg-black z-50 flex flex-col">
+                <video autoplay playsinline class="h-full w-full object-cover"></video>
+                <div class="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-4">
+                    <button class="capture-btn bg-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
+                        <span class="text-3xl">📸</span>
+                    </button>
+                    <button class="cancel-btn bg-red-500 text-white px-4 py-2 rounded-lg">
+                        Cancel
+                    </button>
+                </div>
             </div>
-            <button class="absolute top-4 right-4 text-white text-xl">
-                ✕
-            </button>
         `;
-        document.body.appendChild(cameraModal);
+        document.body.appendChild(cameraUI);
 
-        const video = cameraModal.querySelector('video');
+        const video = cameraUI.querySelector('video');
         video.srcObject = stream;
-        video.play();
+        await video.play();
 
-        const capturePromise = new Promise((resolve, reject) => {
-            const captureButton = cameraModal.querySelector('button');
-            const closeButton = cameraModal.querySelector('.top-4');
+        return new Promise((resolve, reject) => {
+            const captureBtn = cameraUI.querySelector('.capture-btn');
+            const cancelBtn = cameraUI.querySelector('.cancel-btn');
 
-            closeButton.onclick = () => {
+            cancelBtn.onclick = () => {
                 stream.getTracks().forEach(track => track.stop());
-                document.body.removeChild(cameraModal);
-                setIsLoading(false);
-                reject('Camera closed');
+                document.body.removeChild(cameraUI);
+                reject('Camera cancelled');
             };
 
-            captureButton.onclick = () => {
+            captureBtn.onclick = () => {
                 const canvas = document.createElement('canvas');
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0);
-                const photoData = canvas.toDataURL('image/jpeg', 0.7); // Compress to 70% quality
-                
+
+                // Compress the image
+                const photoData = canvas.toDataURL('image/jpeg', 0.7); // 70% quality
+
                 stream.getTracks().forEach(track => track.stop());
-                document.body.removeChild(cameraModal);
-                setIsLoading(false);
-                resolve(photoData);
+                document.body.removeChild(cameraUI);
+
+                // Update history with new photo
+                const newHistory = history.map(item => {
+                    if (item.id === id) {
+                        return {
+                            ...item,
+                            [`photo${photoNumber}`]: photoData
+                        };
+                    }
+                    return item;
+                });
+                setHistory(newHistory);
+                localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
+                resolve();
             };
         });
-
-        const photoData = await capturePromise;
-        
-        const newHistory = history.map(item => {
-            if (item.id === id) {
-                return {
-                    ...item,
-                    [`photo${photoNumber}`]: photoData
-                };
-            }
-            return item;
-        });
-        setHistory(newHistory);
-        localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
-
     } catch (err) {
-        setError('Camera access denied or camera closed.');
-        setIsLoading(false);
+        setError('Camera access denied or not available. Please check your permissions.');
     }
 };
-
     // Separate saveAndReset function
     const saveAndReset = () => {
         if (phpAmount && nzdAmount) {
