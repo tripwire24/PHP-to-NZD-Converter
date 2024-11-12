@@ -287,26 +287,19 @@ return (
                                         <span className="mx-2 text-gray-500">→</span>
                                         <span className="text-lg font-medium text-indigo-600">NZ${entry.nzd}</span>
                                     </div>
-                                    <div className="flex items-center space-x-2">
+                                    <div className="flex items-center space-x-3">
                                         <button
                                             onClick={() => handleHistoryItemExpand(entry.id)}
-                                            className="text-gray-400 hover:text-indigo-600 transition"
+                                            className="px-3 py-1 text-sm font-medium text-indigo-600 hover:text-indigo-800 border border-indigo-600 rounded-lg hover:bg-indigo-50 transition"
                                         >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                {expandedItem === entry.id ? (
-                                                    <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
-                                                ) : (
-                                                    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                                                )}
-                                            </svg>
+                                            {expandedItem === entry.id ? 'Less Info' : 'More Info'}
                                         </button>
                                         <button
                                             onClick={() => deleteHistoryItem(entry.id)}
-                                            className="text-gray-400 hover:text-red-500 transition"
+                                            className="text-2xl hover:opacity-75 transition p-2"
+                                            aria-label="Delete"
                                         >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                            </svg>
+                                            ⛔
                                         </button>
                                     </div>
                                 </div>
