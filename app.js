@@ -30,8 +30,18 @@ function CurrencyConverter() {
                 }
             }
         };
+
+        loadSavedData();
+        window.addEventListener('storage', loadSavedData);
+        window.addEventListener('historyUpdate', loadSavedData);
+
+        return () => {
+            window.removeEventListener('storage', loadSavedData);
+            window.removeEventListener('historyUpdate', loadSavedData);
+        };
+    }, []);    
     // Load saved history when component mounts
-useEffect(() => {
+/*useEffect(() => {
     // Check storage usage
     const checkStorage = async () => {
         try {
