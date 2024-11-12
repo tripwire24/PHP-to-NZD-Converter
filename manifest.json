@@ -1,0 +1,122 @@
+{
+  "name": "PHP to NZD Currency Converter",
+  "short_name": "PHP-NZD",
+  "description": "Convert Philippine Peso to New Zealand Dollar with real-time rates",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait",
+  "categories": ["finance", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/converter-screen.png",
+      "sizes": "1170x2532",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Currency Converter Screen"
+    },
+    {
+      "src": "screenshots/history-screen.png",
+      "sizes": "1170x2532",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Conversion History Screen"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Conversion",
+      "short_name": "Convert",
+      "description": "Start a new currency conversion",
+      "url": "/?source=pwa",
+      "icons": [{ "src": "icons/convert-shortcut.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "View History",
+      "short_name": "History",
+      "description": "View conversion history",
+      "url": "/?view=history&source=pwa",
+      "icons": [{ "src": "icons/history-shortcut.png", "sizes": "192x192" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  },
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "display_override": ["standalone", "minimal-ui"],
+  "protocol_handlers": [
+    {
+      "protocol": "web+phpnzd",
+      "url": "/?convert=%s"
+    }
+  ],
+  "lang": "en-US",
+  "dir": "ltr",
+  "scope": "/",
+  "id": "php-nzd-converter",
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
+}
