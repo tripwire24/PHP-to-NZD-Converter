@@ -106,46 +106,83 @@ const convertCurrency = (value) => {
     };
 
     // Handle photo capture function
-    const handlePhotoCapture = async (id, photoNumber) => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' } 
-            });
-            videoRef.current.srcObject = stream;
-            videoRef.current.play();
+const handlePhotoCapture = async (id, photoNumber) => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'environment',
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            } 
+        });
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
 
-            // Take the photo when the video is playing
-            videoRef.current.addEventListener('canplay', () => {
-                if (photoRef.current && videoRef.current) {
-                    const context = photoRef.current.getContext('2d');
-                    photoRef.current.width = videoRef.current.videoWidth;
-                    photoRef.current.height = videoRef.current.videoHeight;
-                    context.drawImage(videoRef.current, 0, 0);
-                    
-                    const photoData = photoRef.current.toDataURL('image/jpeg');
-                    
-                    // Stop the camera
-                    stream.getTracks().forEach(track => track.stop());
-                    
-                    // Update history with the new photo
-                    const newHistory = history.map(item => {
-                        if (item.id === id) {
-                            return {
-                                ...item,
-                                [`photo${photoNumber}`]: photoData
-                            };
-                        }
-                        return item;
-                    });
-                    setHistory(newHistory);
-                    localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
-                }
-            }, { once: true });
+        // Add a camera UI
+        setIsLoading(true);
+        const cameraModal = document.createElement('div');
+        cameraModal.className = 'fixed inset-0 bg-black z-50 flex flex-col';
+        cameraModal.innerHTML = `
+            <video class="w-full h-full object-cover"></video>
+            <div class="absolute bottom-0 left-0 right-0 p-4 flex justify-center">
+                <button class="bg-white rounded-full p-4 shadow-lg">
+                    <span class="text-2xl">📸</span>
+                </button>
+            </div>
+            <button class="absolute top-4 right-4 text-white text-xl">
+                ✕
+            </button>
+        `;
+        document.body.appendChild(cameraModal);
 
-        } catch (err) {
-            setError('Camera access denied. Please check your permissions.');
-        }
-    };
+        const video = cameraModal.querySelector('video');
+        video.srcObject = stream;
+        video.play();
+
+        const capturePromise = new Promise((resolve, reject) => {
+            const captureButton = cameraModal.querySelector('button');
+            const closeButton = cameraModal.querySelector('.top-4');
+
+            closeButton.onclick = () => {
+                stream.getTracks().forEach(track => track.stop());
+                document.body.removeChild(cameraModal);
+                setIsLoading(false);
+                reject('Camera closed');
+            };
+
+            captureButton.onclick = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                const photoData = canvas.toDataURL('image/jpeg', 0.7); // Compress to 70% quality
+                
+                stream.getTracks().forEach(track => track.stop());
+                document.body.removeChild(cameraModal);
+                setIsLoading(false);
+                resolve(photoData);
+            };
+        });
+
+        const photoData = await capturePromise;
+        
+        const newHistory = history.map(item => {
+            if (item.id === id) {
+                return {
+                    ...item,
+                    [`photo${photoNumber}`]: photoData
+                };
+            }
+            return item;
+        });
+        setHistory(newHistory);
+        localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
+
+    } catch (err) {
+        setError('Camera access denied or camera closed.');
+        setIsLoading(false);
+    }
+};
 
     // Separate saveAndReset function
     const saveAndReset = () => {
@@ -318,50 +355,83 @@ const convertCurrency = (value) => {
                                                 {/* Photo 1 */}
                                                 <div className="relative">
                                                     {entry.photo1 ? (
-                                                        <img
-                                                            src={entry.photo1}
-                                                            alt="Photo 1"
-                                                            className="w-full h-32 object-cover rounded-lg cursor-pointer"
-                                                            onClick={() => setExpandedImage(entry.photo1)}
-                                                        />
+                                                        <div className="relative group">
+                                                            <img
+                                                                src={entry.photo1}
+                                                                alt="Photo 1"
+                                                                className="w-full h-32 object-cover rounded-lg cursor-pointer"
+                                                                onClick={() => setExpandedImage(entry.photo1)}
+                                                            />
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const newHistory = history.map(item => {
+                                                                        if (item.id === entry.id) {
+                                                                            return { ...item, photo1: null };
+                                                                        }
+                                                                        return item;
+                                                                    });
+                                                                    setHistory(newHistory);
+                                                                    localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
+                                                                }}
+                                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 
+                                                                         opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            >
+                                                                ❌
+                                                            </button>
+                                                        </div>
                                                     ) : (
                                                         <button
                                                             onClick={() => handlePhotoCapture(entry.id, 1)}
-                                                            className="w-full h-32 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 transition"
+                                                            className="w-full h-32 flex flex-col items-center justify-center border-2 
+                                                                     border-dashed border-gray-300 rounded-lg hover:border-indigo-500 
+                                                                     hover:bg-indigo-50 transition"
                                                         >
-                                                            <span className="text-4xl text-gray-400">📷</span>
+                                                            <span className="text-4xl text-gray-400 mb-1">📷</span>
+                                                            <span className="text-sm text-gray-500">Tap to capture</span>
                                                         </button>
                                                     )}
                                                 </div>
                                                 {/* Photo 2 */}
                                                 <div className="relative">
                                                     {entry.photo2 ? (
-                                                        <img
-                                                            src={entry.photo2}
-                                                            alt="Photo 2"
-                                                            className="w-full h-32 object-cover rounded-lg cursor-pointer"
-                                                            onClick={() => setExpandedImage(entry.photo2)}
-                                                        />
+                                                        <div className="relative group">
+                                                            <img
+                                                                src={entry.photo2}
+                                                                alt="Photo 2"
+                                                                className="w-full h-32 object-cover rounded-lg cursor-pointer"
+                                                                onClick={() => setExpandedImage(entry.photo2)}
+                                                            />
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const newHistory = history.map(item => {
+                                                                        if (item.id === entry.id) {
+                                                                            return { ...item, photo2: null };
+                                                                        }
+                                                                        return item;
+                                                                    });
+                                                                    setHistory(newHistory);
+                                                                    localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
+                                                                }}
+                                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 
+                                                                         opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            >
+                                                                ❌
+                                                            </button>
+                                                        </div>
                                                     ) : (
                                                         <button
                                                             onClick={() => handlePhotoCapture(entry.id, 2)}
-                                                            className="w-full h-32 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 transition"
+                                                            className="w-full h-32 flex flex-col items-center justify-center border-2 
+                                                                     border-dashed border-gray-300 rounded-lg hover:border-indigo-500 
+                                                                     hover:bg-indigo-50 transition"
                                                         >
-                                                            <span className="text-4xl text-gray-400">📷</span>
+                                                            <span className="text-4xl text-gray-400 mb-1">📷</span>
+                                                            <span className="text-sm text-gray-500">Tap to capture</span>
                                                         </button>
                                                     )}
                                                 </div>
-                                            </div>
-                                        </div>
-                                        <div className="text-sm text-gray-500">
-                                            Rate: 1 PHP = {entry.rate?.toFixed(4)} NZD
-                                        </div>
-                                        <div className="text-xs text-gray-400">
-                                            {entry.timestamp}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
                         ))}
                     </div>
                 </div>
