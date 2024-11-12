@@ -10,30 +10,10 @@ function CurrencyConverter() {
     const [error, setError] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [locationName, setLocationName] = useState('');
-    const [rating, setRating] = useState(0);
+    const [expandedItem, setExpandedItem] = useState(null);
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
-    const autocompleteRef = useRef(null);
-
-    // Initialize Google Places Autocomplete
-    useEffect(() => {
-        if (window.google && window.google.maps) {
-            autocompleteRef.current = new google.maps.places.Autocomplete(
-                document.getElementById('location-input'),
-                { types: ['establishment'] }
-            );
-            
-            autocompleteRef.current.addListener('place_changed', () => {
-                const place = autocompleteRef.current.getPlace();
-                if (place.name) {
-                    setLocationName(place.name);
-                }
-            });
-        }
-    }, []);
-
-// Load saved history when component mounts
+    // Load saved history when component mounts
     useEffect(() => {
         const savedHistory = localStorage.getItem('conversionHistory');
         if (savedHistory) {
@@ -41,47 +21,34 @@ function CurrencyConverter() {
         }
     }, []);
 
-    const deleteHistoryItem = (id) => {
-        const newHistory = history.filter(item => item.id !== id);
-        setHistory(newHistory);
-        localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
-    };
-
-    const deleteAllHistory = () => {
-        setHistory([]);
-        localStorage.removeItem('conversionHistory');
-        setShowDeleteConfirm(false);
-    };
-
-    const saveAndReset = () => {
-        if (phpAmount && nzdAmount) {
-            const newEntry = {
-                id: Date.now(),
-                php: phpAmount,
-                nzd: nzdAmount,
-                rate: rate,
-                timestamp: new Date().toLocaleString(),
-                location: locationName,
-                rating: rating
-            };
-            const newHistory = [newEntry, ...history.slice(0, 9)];
-            setHistory(newHistory);
-            localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
-            setPhpAmount('');
-            setNzdAmount('');
-            setLocationName('');
-            setRating(0);
+    // Fetch exchange rate
+    const fetchExchangeRate = async () => {
+        try {
+            const response = await fetch('https://api.exchangerate-api.com/v4/latest/PHP');
+            const data = await response.json();
+            setRate(data.rates.NZD);
+            setLastUpdated(new Date().toLocaleString());
+            setError(null);
+        } catch (err) {
+            setError('Failed to fetch exchange rate. Using stored rate.');
+            setRate(0.027); // Fallback rate
         }
     };
 
-const StarRating = ({ rating, onRatingChange }) => {
+    useEffect(() => {
+        fetchExchangeRate();
+        // Fetch rate every hour
+        const interval = setInterval(fetchExchangeRate, 3600000);
+        return () => clearInterval(interval);
+    }, []);
+    const StarRating = ({ rating, onRatingChange, readonly = false }) => {
         return (
             <div className="flex items-center space-x-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                     <button
                         key={star}
-                        onClick={() => onRatingChange(star)}
-                        className="focus:outline-none"
+                        onClick={() => !readonly && onRatingChange(star)}
+                        className={`focus:outline-none ${readonly ? 'cursor-default' : 'cursor-pointer'}`}
                     >
                         <svg
                             className={`w-6 h-6 ${
@@ -97,7 +64,125 @@ const StarRating = ({ rating, onRatingChange }) => {
             </div>
         );
     };
+const convertCurrency = (value) => {
+        const amount = parseFloat(value);
+        if (!isNaN(amount) && rate) {
+            setNzdAmount((amount * rate).toFixed(2));
+        } else {
+            setNzdAmount('');
+        }
+    };
 
+    const handlePhpChange = (e) => {
+        const value = e.target.value;
+        setPhpAmount(value);
+        convertCurrency(value);
+    };
+
+    const handleHistoryItemExpand = (id) => {
+        setExpandedItem(expandedItem === id ? null : id);
+    };
+
+    const handleStoreNameUpdate = (id, storeName) => {
+        const newHistory = history.map(item => {
+            if (item.id === id) {
+                return { ...item, storeName };
+            }
+            return item;
+        });
+        setHistory(newHistory);
+        localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
+    };
+
+    const handleRatingUpdate = (id, rating) => {
+        const newHistory = history.map(item => {
+            if (item.id === id) {
+                return { ...item, rating };
+            }
+            return item;
+        });
+        setHistory(newHistory);
+        localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
+    };
+const saveAndReset = () => {
+        if (phpAmount && nzdAmount) {
+            const newEntry = {
+                id: Date.now(),
+                php: phpAmount,
+                nzd: nzdAmount,
+                rate: rate,
+                timestamp: new Date().toLocaleString(),
+                storeName: '',
+                rating: 0
+            };
+            const newHistory = [newEntry, ...history.slice(0, 9)];
+            setHistory(newHistory);
+            localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
+            setPhpAmount('');
+            setNzdAmount('');
+        }
+    };
+
+    const deleteHistoryItem = (id) => {
+        const newHistory = history.filter(item => item.id !== id);
+        setHistory(newHistory);
+        localStorage.setItem('conversionHistory', JSON.stringify(newHistory));
+    };
+
+    const deleteAllHistory = () => {
+        setHistory([]);
+        localStorage.removeItem('conversionHistory');
+        setShowDeleteConfirm(false);
+    };
+const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' } 
+            });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                setShowCamera(true);
+            }
+        } catch (err) {
+            setError('Camera access denied. Please check your permissions.');
+        }
+    };
+
+    const captureImage = async () => {
+        if (!videoRef.current || !canvasRef.current) return;
+
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const context = canvas.getContext('2d');
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const stream = video.srcObject;
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        setShowCamera(false);
+
+        setIsLoading(true);
+        try {
+            const result = await Tesseract.recognize(
+                canvas.toDataURL('image/png'),
+                'eng',
+                { logger: m => console.log(m) }
+            );
+
+            const numbers = result.data.text.match(/\d+(\.\d+)?/);
+            if (numbers) {
+                setPhpAmount(numbers[0]);
+                convertCurrency(numbers[0]);
+            }
+        } catch (err) {
+            setError('Failed to process image. Please enter amount manually.');
+        }
+        setIsLoading(false);
+    };
 return (
         <div className="min-h-screen p-4 space-y-6">
             {/* Main converter card */}
@@ -163,28 +248,7 @@ return (
                             </div>
                         </div>
 
-                        {/* Location Input */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Location
-                            </label>
-                            <input
-                                id="location-input"
-                                type="text"
-                                placeholder="Enter store or location name"
-                                className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                            />
-                        </div>
-
-                        {/* Rating */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Intent Rating
-                            </label>
-                            <StarRating rating={rating} onRatingChange={setRating} />
-                        </div>
-
-<button
+                        <button
                             onClick={saveAndReset}
                             disabled={!phpAmount || !nzdAmount}
                             className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -200,8 +264,7 @@ return (
                     </div>
                 </div>
             </div>
-
-            {/* History section */}
+{/* History section */}
             {history.length > 0 && (
                 <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
                     <div className="bg-indigo-600 px-6 py-4 flex justify-between items-center">
@@ -224,28 +287,59 @@ return (
                                         <span className="mx-2 text-gray-500">→</span>
                                         <span className="text-lg font-medium text-indigo-600">NZ${entry.nzd}</span>
                                     </div>
-                                    <button
-                                        onClick={() => deleteHistoryItem(entry.id)}
-                                        className="text-gray-400 hover:text-red-500 transition"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                        </svg>
-                                    </button>
+                                    <div className="flex items-center space-x-2">
+                                        <button
+                                            onClick={() => handleHistoryItemExpand(entry.id)}
+                                            className="text-gray-400 hover:text-indigo-600 transition"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                {expandedItem === entry.id ? (
+                                                    <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
+                                                ) : (
+                                                    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                                                )}
+                                            </svg>
+                                        </button>
+                                        <button
+                                            onClick={() => deleteHistoryItem(entry.id)}
+                                            className="text-gray-400 hover:text-red-500 transition"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
+
+                                {expandedItem === entry.id && (
+                                    <div className="mt-4 space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Store Name
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={entry.storeName || ''}
+                                                onChange={(e) => handleStoreNameUpdate(entry.id, e.target.value)}
+                                                placeholder="Enter store name"
+                                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Purchase Intent Rating
+                                            </label>
+                                            <StarRating
+                                                rating={entry.rating || 0}
+                                                onRatingChange={(rating) => handleRatingUpdate(entry.id, rating)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="text-sm text-gray-500 mt-1">
                                     Rate: 1 PHP = {entry.rate?.toFixed(4)} NZD
                                 </div>
-                                {entry.location && (
-                                    <div className="text-sm text-gray-600 mt-1">
-                                        📍 {entry.location}
-                                    </div>
-                                )}
-                                {entry.rating > 0 && (
-                                    <div className="flex items-center mt-1">
-                                        <StarRating rating={entry.rating} onRatingChange={() => {}} />
-                                    </div>
-                                )}
                                 <div className="text-xs text-gray-400 mt-1">
                                     {entry.timestamp}
                                 </div>
@@ -254,8 +348,7 @@ return (
                     </div>
                 </div>
             )}
-
-            {/* Delete All Confirmation Modal */}
+{/* Delete All Confirmation Modal */}
             {showDeleteConfirm && (
                 <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
                     <div className="bg-white p-6 rounded-2xl w-full max-w-sm">
@@ -318,3 +411,8 @@ return (
         </div>
     );
 }
+// Render the app
+ReactDOM.render(
+    <CurrencyConverter />,
+    document.getElementById('root')
+);
