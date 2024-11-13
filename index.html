@@ -2,192 +2,98 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>PHP to NZD Converter</title>
-    
-    <!-- Mobile Meta Tags -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="description" content="Convert Philippine Peso to New Zealand Dollar with real-time rates">
     
     <!-- PWA Meta Tags -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
-    <meta name="description" content="Convert Philippine Peso to New Zealand Dollar">
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-    <link rel="icon" type="image/png" href="icons/icon-192x192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="PHP-NZD">
     
-    <!-- Required Scripts -->
-    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <title>PHP to NZD Currency Converter</title>
+    
+    <!-- Manifest Link -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon and Apple Touch Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    
+    <!-- Your existing style imports -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js"></script>
-
-    <!-- Mobile Optimization Styles -->
-    <style>
-        body {
-            overscroll-behavior: none;
-            -webkit-overflow-scrolling: touch;
-            position: fixed;
-            width: 100%;
-            height: 100%;
-        }
-        
-        /* Prevent text size adjustment on orientation change */
-        html {
-            -webkit-text-size-adjust: 100%;
-        }
-
-        /* Disable double-tap zoom */
-        * {
-            touch-action: manipulation;
-        }
-
-        /* Hide scrollbar but keep functionality */
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        /* Fix for iOS safe areas */
-        @supports (padding-top: env(safe-area-inset-top)) {
-            .safe-area-padding {
-                padding-top: env(safe-area-inset-top);
-                padding-bottom: env(safe-area-inset-bottom);
-                padding-left: env(safe-area-inset-left);
-                padding-right: env(safe-area-inset-right);
-            }
-        }
-
-        /* Fix for mobile keyboard adjustments */
-        @media screen and (max-width: 768px) {
-            body.keyboard-open {
-                height: -webkit-fill-available;
-            }
-        }
-
-        /* Improve touch targets on mobile */
-        @media (max-width: 768px) {
-            button, input, select {
-                min-height: 44px;
-                min-width: 44px;
-            }
-        }
-
-        /* Install prompt styles */
-        .install-prompt {
-            transform: translateY(100%);
-            transition: transform 0.3s ease-in-out;
-        }
-        .install-prompt.show {
-            transform: translateY(0);
-        }
-    </style>
 </head>
-<body class="bg-gray-100 safe-area-padding">
+<body>
     <div id="root"></div>
     
-    <!-- Install Prompt -->
+    <!-- Install Prompt UI -->
     <div id="installPrompt" class="install-prompt fixed bottom-0 left-0 right-0 bg-white p-4 shadow-lg hidden">
         <div class="max-w-md mx-auto flex justify-between items-center">
             <div>
                 <h3 class="font-semibold text-lg">Install App</h3>
-                <p class="text-sm text-gray-600">Add to your home screen for quick access</p>
+                <p>Add to your home screen for quick access</p>
             </div>
             <div class="flex gap-2">
-                <button id="installDecline" class="px-4 py-2 text-gray-600">Not now</button>
-                <button id="installAccept" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Install</button>
+                <button id="dismissInstall" class="px-4 py-2 text-gray-600">Not now</button>
+                <button id="installButton" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Install</button>
             </div>
         </div>
     </div>
-    
-    <!-- Main App Script -->
-    <script type="text/babel" src="app.js"></script>
 
-    <!-- Service Worker and PWA Installation -->
+    <!-- Your existing script imports -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js"></script>
+
+    <!-- Service Worker Registration -->
     <script>
-        // Service Worker Registration
+        let deferredPrompt;
+
+        // Register Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
                     .then(registration => {
-                        console.log('ServiceWorker registration successful');
+                        console.log('ServiceWorker registration successful:', registration.scope);
                     })
-                    .catch(err => {
-                        console.log('ServiceWorker registration failed: ', err);
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed:', error);
                     });
             });
         }
 
-        // Install Prompt Handler
-        let deferredPrompt;
-        const installPrompt = document.getElementById('installPrompt');
-
+        // Handle Install Prompt
         window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
             e.preventDefault();
+            // Stash the event so it can be triggered later
             deferredPrompt = e;
-            installPrompt.classList.remove('hidden');
-            installPrompt.classList.add('show');
+            // Show your custom install prompt
+            document.getElementById('installPrompt').classList.remove('hidden');
         });
 
-        document.getElementById('installAccept').addEventListener('click', async () => {
+        // Handle Install Button Click
+        document.getElementById('installButton').addEventListener('click', async () => {
             if (deferredPrompt) {
+                // Show the install prompt
                 deferredPrompt.prompt();
+                // Wait for the user to respond to the prompt
                 const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    console.log('App installed');
-                }
+                // We no longer need the prompt. Clear it up
                 deferredPrompt = null;
-                installPrompt.classList.remove('show');
-                installPrompt.classList.add('hidden');
+                // Hide the install prompt UI
+                document.getElementById('installPrompt').classList.add('hidden');
             }
         });
 
-        document.getElementById('installDecline').addEventListener('click', () => {
-            installPrompt.classList.remove('show');
-            installPrompt.classList.add('hidden');
-        });
-
-        // iOS Install Prompt
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-
-        if (isIOS && !isInStandaloneMode) {
-            const iosPrompt = document.createElement('div');
-            iosPrompt.className = 'fixed bottom-0 left-0 right-0 bg-white p-4 shadow-lg';
-            iosPrompt.innerHTML = `
-                <div class="max-w-md mx-auto">
-                    <h3 class="font-semibold text-lg">Install this app</h3>
-                    <p class="text-sm text-gray-600">
-                        Tap <svg class="inline-block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
-                        </svg> then "Add to Home Screen"
-                    </p>
-                </div>
-            `;
-            document.body.appendChild(iosPrompt);
-        }
-
-        // Handle mobile keyboard
-        window.visualViewport.addEventListener('resize', () => {
-            if (document.activeElement.tagName === 'INPUT') {
-                document.body.classList.add('keyboard-open');
-            } else {
-                document.body.classList.remove('keyboard-open');
-            }
-        });
-
-        // Handle storage changes
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'conversionHistory') {
-                // Trigger a reload of the data in the app
-                window.dispatchEvent(new CustomEvent('historyUpdate'));
-            }
+        // Handle Dismiss Button Click
+        document.getElementById('dismissInstall').addEventListener('click', () => {
+            document.getElementById('installPrompt').classList.add('hidden');
         });
     </script>
+
+    <!-- Your app script -->
+    <script type="text/babel" src="app.js"></script>
 </body>
 </html>
