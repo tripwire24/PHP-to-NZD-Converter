@@ -33,15 +33,6 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
-    <!-- Debug Install Button - Now more subtle -->
-    <button 
-        id="debugInstall" 
-        class="fixed top-4 right-4 z-50 px-3 py-2 bg-indigo-600 bg-opacity-80 text-white text-sm rounded-lg shadow-lg"
-        onclick="debugInstall()"
-    >
-        Install App
-    </button>
-
     <!-- Main content -->
     <div id="root" class="flex-grow"></div>
     
@@ -87,29 +78,7 @@
         document.getElementById('installPrompt').classList.remove('hidden');
     });
 
-    function debugInstall() {
-        console.log('Debug install clicked');
-        console.log('Deferred prompt available:', !!deferredPrompt);
-        
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((choiceResult) => {
-                console.log('User choice:', choiceResult.outcome);
-                if (choiceResult.outcome === 'accepted') {
-                    console.log('User accepted the install prompt');
-                }
-                deferredPrompt = null;
-            });
-        } else {
-            if (window.matchMedia('(display-mode: standalone)').matches) {
-                alert('App is already installed!');
-            } else {
-                alert('Install prompt not available yet. Please try:\n1. Clear browser data\n2. Wait a few minutes\n3. Refresh page');
-            }
-        }
-    }
-
-    // Handle Install Button Click
+   // Handle Install Button Click
     document.getElementById('installButton').addEventListener('click', async () => {
         if (deferredPrompt) {
             deferredPrompt.prompt();
